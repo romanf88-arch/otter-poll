@@ -1,0 +1,72 @@
+rules_version = '2';
+
+// Security rules for Otter Poll.
+// Instructors sign in with Google. Participants are signed in anonymously.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isInstructor() {
+      return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com';
+    }
+
+    // An instructor's saved polls. Only that instructor can see or change them.
+    match /users/{uid}/polls/{pollId} {
+      allow read, write: if isInstructor() && request.auth.uid == uid;
+    }
+
+    // One run of a poll. The document id is the join code.
+    match /sessions/{code} {
+      // Anyone with the code can open the poll.
+      allow get: if signedIn();
+      // Instructors can list only their own sessions.
+      allow list: if isInstructor() && resource.data.owner == request.auth.uid;
+      allow create: if isInstructor() && request.resource.data.owner == request.auth.uid;
+      allow update: if isInstructor()
+        && resource.data.owner == request.auth.uid
+        && request.resource.data.owner == resource.data.owner;
+      allow delete: if isInstructor() && resource.data.owner == request.auth.uid;
+
+      function session() {
+        return get(/databases/$(database)/documents/sessions/$(code)).data;
+      }
+
+      function ownsSession() {
+        return isInstructor() && session().owner == request.auth.uid;
+      }
+
+      // One document per participant, holding that participant's answers.
+      match /responses/{uid} {
+        allow get: if signedIn() && request.auth.uid == uid;
+        // The instructor reads all answers. In a self-paced poll that shares
+        // results, participants read answers too (answers carry no names).
+        allow read: if ownsSession()
+          || (signedIn() && session().showResults == true && session().pacing == 'self');
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && session().status == 'open'
+          && session().accepting == true
+          && request.resource.data.keys().hasOnly(['a', 'at'])
+          && request.resource.data.a is map
+          && request.resource.data.a.size() <= 40;
+        // The instructor can clear a question or delete the session.
+        allow update, delete: if ownsSession();
+      }
+
+      // Names, kept apart from answers so participants can never read them.
+      match /people/{uid} {
+        allow get: if signedIn() && request.auth.uid == uid;
+        allow read: if ownsSession();
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['name'])
+          && request.resource.data.name is string
+          && request.resource.data.name.size() <= 60;
+        allow delete: if ownsSession();
+      }
+    }
+  }
+}

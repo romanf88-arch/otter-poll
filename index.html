@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Join a poll | Otter Poll</title>
+    <meta name="description" content="Join a classroom poll with the code your instructor is showing." />
+    <meta name="theme-color" content="#31456b" />
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body class="participant">
+    <a class="skip" href="#app">Skip to main content</a>
+    <header class="site-header">
+      <div class="wrap header-row">
+        <a class="brand" href="./">
+          <svg class="otter-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+            <circle cx="32" cy="32" r="31" fill="#6b92b6" />
+            <circle cx="13" cy="17" r="7" fill="#7d553b" />
+            <circle cx="51" cy="17" r="7" fill="#7d553b" />
+            <ellipse cx="32" cy="33" rx="25" ry="22" fill="#7d553b" />
+            <path d="M32 21c-13 0-20 8-20 17.500c0 10 9 15.500 20 15.500s20-5.500 20-15.500c0-9.500-7-17.500-20-17.500z" fill="#f5e6cd" />
+            <circle cx="22" cy="33" r="3.600" fill="#2b2f3a" />
+            <circle cx="42" cy="33" r="3.600" fill="#2b2f3a" />
+            <circle cx="23.200" cy="31.800" r="1.200" fill="#fff" />
+            <circle cx="43.200" cy="31.800" r="1.200" fill="#fff" />
+            <path d="M27 38q5-3.500 10 0q.5 5-5 6q-5.500-1-5-6z" fill="#3b2a20" />
+            <path d="M32 44v2M32 46q-3 3.500-6 1M32 46q3 3.500 6 1" fill="none" stroke="#3b2a20" stroke-width="1.500" stroke-linecap="round" />
+          </svg>
+          <span class="brand-name">Otter Poll</span>
+        </a>
+      </div>
+    </header>
+
+    <main id="app" class="wrap" tabindex="-1">
+      <p class="loading" id="boot">Loading</p>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap">
+        <p>Made for classes at Cal State Monterey Bay. Otter Poll is not an official university service.</p>
+      </div>
+    </footer>
+
+    <div id="live" class="vh" role="status" aria-live="polite"></div>
+    <script>
+      // If the app has not started after 12 seconds, say so instead of showing "Loading" forever.
+      window.setTimeout(function () {
+        var el = document.getElementById('boot');
+        if (el) el.textContent = 'This page is taking a long time to load. Check your internet connection, then reload the page.';
+      }, 12000);
+    </script>
+    <noscript><p style="padding: 1rem">Otter Poll needs JavaScript. Turn it on in your browser settings and reload this page.</p></noscript>
+    <script type="module" src="js/participant.js"></script>
+  </body>
+</html>

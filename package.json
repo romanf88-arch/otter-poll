@@ -1,0 +1,13 @@
+{
+  "name": "otter-poll",
+  "private": true,
+  "type": "module",
+  "description": "Classroom polling app. The site itself needs no build step; these scripts are for testing only.",
+  "scripts": {
+    "test": "node --test tests/tally.test.mjs",
+    "sim": "node tests/sim.mjs"
+  },
+  "devDependencies": {
+    "firebase": "13.3.0"
+  }
+}
