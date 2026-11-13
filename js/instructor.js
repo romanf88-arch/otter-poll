@@ -687,7 +687,14 @@ function presentView(code) {
       h('h2', null, 'Join in'),
       h('div', { class: 'join-qr' }, qrSvg(url, 'QR code that opens this poll')),
       h('p', { class: 'join-label' }, 'Scan the code, or go to'),
-      h('p', { class: 'join-url' }, joinBaseShort()),
+      // If the address is too long for one line, it breaks after a slash, not inside a word.
+      h(
+        'p',
+        { class: 'join-url' },
+        joinBaseShort()
+          .split('/')
+          .map((part, i) => (i === 0 ? h('span', null, part) : [h('wbr'), h('span', null, '/' + part)])),
+      ),
       h('p', { class: 'join-label' }, 'and enter'),
       h('p', { class: 'join-code' }, formatCode(code)),
       h('div', { class: 'join-actions' }, copyButton, h('button', { class: 'btn btn-small', type: 'button', onclick: () => dialog.showModal() }, 'Show full screen')),

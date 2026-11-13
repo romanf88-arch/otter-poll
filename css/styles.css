@@ -1411,7 +1411,12 @@ body.presenting .header-row {
   margin: 0 0 0.5rem;
   color: var(--ink);
   font-weight: 600;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+
+/* Each part of the address stays whole, so a long address breaks at a slash. */
+.join-url span {
+  white-space: nowrap;
 }
 
 .join-code {
