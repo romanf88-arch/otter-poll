@@ -20,7 +20,7 @@ The colors and typeface follow the Cal State Monterey Bay brand guide (Monterey 
 
 ## How to run a poll
 
-1. Open the instructor page and sign in with a Google account.
+1. Open the instructor page and sign in with your CSUMB Google account (your @csumb.edu address).
 2. Choose **New poll**, add questions, and save. To try the app first, choose **Add a sample poll**.
 3. Choose **Start**. The screen shows the QR code, the address, and the join code. **Show full screen** makes the QR code large enough for the back of the room.
 4. Use **Next question** and **Previous** to move through the poll. **Close voting** stops answers to the current question.
@@ -48,10 +48,12 @@ There is no build step. The site is plain HTML, CSS, and JavaScript modules, ser
 
 Answers are stored in a Firebase project named `otter-poll` (Cloud Firestore, United States). The Firebase settings in `js/config.js` are public by design. They identify the project and do not grant access. Access is decided by `firestore.rules`:
 
-- Instructors sign in with Google. Each instructor can read and change only their own polls and sessions.
+- Instructors sign in with Google. Only accounts with an @csumb.edu address can run polls, plus the one account that owns the Firebase project. Every CSUMB account qualifies, which includes student accounts. Each instructor can read and change only their own polls and sessions.
 - Participants are signed in anonymously. A participant can write only their own answers, and only while voting is open.
 - Names are stored apart from answers, and participants can never read them.
 - In a self-paced poll that shares results, participants' browsers read the answers (which carry no names) to draw the charts, because no instructor page is open to add them up. In a poll the instructor paces, participants receive only the totals.
+
+To change who can run polls, edit `INSTRUCTOR_DOMAIN` and `OWNER_UIDS` in `js/config.js` and the matching lines in `firestore.rules`. The rules are what enforce it. The settings in `js/config.js` only decide which screen a person sees.
 
 To change the rules, edit `firestore.rules`, then paste the file into the Firebase console under Firestore Database, Rules, and choose Publish.
 
@@ -75,7 +77,7 @@ npm install
 npm test
 ```
 
-`npm test` runs the counting and CSV tests. To act as a room of participants, start a poll on the instructor page and pass its join code to the simulation script. This example sends 30 participants who answer every question:
+`npm test` runs the counting, CSV, and instructor-access tests. To act as a room of participants, start a poll on the instructor page and pass its join code to the simulation script. This example sends 30 participants who answer every question:
 
 ```bash
 node tests/sim.mjs vote ABC234 30 all

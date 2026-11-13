@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Security rules for Otter Poll.
-// Instructors sign in with Google. Participants are signed in anonymously.
+// Instructors sign in with a CSUMB Google account. Participants are signed in anonymously.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,8 +9,24 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // The account that owns this Firebase project. It can always run polls,
+    // so the owner is never locked out. js/config.js lists the same id.
+    function isOwnerAccount() {
+      return request.auth.uid == 'M9q5lSN3H2U8cNClac9zlE6oeKD2';
+    }
+
+    function hasCsumbEmail() {
+      return request.auth.token.email_verified == true
+        && request.auth.token.email.lower().matches('.*@csumb[.]edu$');
+    }
+
+    // Running polls is limited to Google sign-ins from CSUMB accounts.
+    // The provider check comes first so anonymous participants, whose tokens
+    // have no email, never reach the email checks.
     function isInstructor() {
-      return signedIn() && request.auth.token.firebase.sign_in_provider == 'google.com';
+      return signedIn()
+        && request.auth.token.firebase.sign_in_provider == 'google.com'
+        && (isOwnerAccount() || hasCsumbEmail());
     }
 
     // An instructor's saved polls. Only that instructor can see or change them.

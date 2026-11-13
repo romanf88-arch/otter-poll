@@ -12,6 +12,7 @@ import * as authMod from 'https://www.gstatic.com/firebasejs/13.3.0/firebase-aut
 import * as fs from 'https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js';
 import { firebaseConfig } from './config.js';
 import { makeCode } from './util.js';
+import { canInstruct } from './access.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = authMod.getAuth(app);
@@ -25,7 +26,11 @@ export function onUser(callback) {
   return authMod.onAuthStateChanged(auth, callback);
 }
 
-export const isInstructor = (user) => !!user && !user.isAnonymous;
+// Signed in with Google (participants are signed in anonymously).
+export const isGoogleUser = (user) => !!user && !user.isAnonymous;
+
+// Signed in with an account that is allowed to run polls.
+export const isInstructor = (user) => canInstruct(user);
 
 export function signInWithGoogle() {
   const provider = new authMod.GoogleAuthProvider();

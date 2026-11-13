@@ -4,7 +4,7 @@
   "type": "module",
   "description": "Classroom polling app. The site itself needs no build step; these scripts are for testing only.",
   "scripts": {
-    "test": "node --test tests/tally.test.mjs",
+    "test": "node --test tests/tally.test.mjs tests/access.test.mjs",
     "sim": "node tests/sim.mjs"
   },
   "devDependencies": {

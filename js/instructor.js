@@ -54,7 +54,8 @@ function route() {
   clear(app);
   drawNav();
   if (!db.isInstructor(user)) {
-    signInView();
+    if (db.isGoogleUser(user)) notAllowedView(user);
+    else signInView();
     return;
   }
   const [, name, arg] = window.location.hash.split('/');
@@ -127,13 +128,31 @@ function signInView() {
       { class: 'card center' },
       h('div', { class: 'otter-box', svg: otterSvg('ballot') }),
       h('h1', null, 'Otter Poll for instructors'),
-      h('p', { class: 'lead' }, 'Sign in with a Google account to make polls, run them with your class, and keep the results.'),
+      h('p', { class: 'lead' }, 'Sign in with your Cal State Monterey Bay Google account (your @csumb.edu address) to make polls, run them with your class, and keep the results.'),
       button,
       error,
       h('p', { class: 'hint' }, 'Participants never need an account. They join with a code, a link, or a QR code.'),
     ),
     h('p', { class: 'below-card' }, 'Joining a poll? ', h('a', { href: './' }, 'Go to the participant page')),
   );
+}
+
+// Shown when someone signs in with a Google account that is not allowed to run polls.
+export function notAllowedView(account) {
+  setTitle('Account not allowed');
+  clear(app).append(
+    h(
+      'section',
+      { class: 'card center' },
+      h('div', { class: 'otter-box', svg: otterSvg('sleep') }),
+      h('h1', null, 'This account cannot run polls'),
+      h('p', { class: 'lead' }, `You are signed in as ${account.email || 'an account without an email address'}. The instructor page is open only to Cal State Monterey Bay accounts, which have addresses ending in @csumb.edu.`),
+      h('button', { class: 'btn btn-primary btn-big', type: 'button', onclick: () => db.signOut() }, 'Sign in with a different account'),
+      h('p', { class: 'hint' }, 'Anyone can answer a poll. Only running one needs a CSUMB account.'),
+    ),
+    h('p', { class: 'below-card' }, 'Joining a poll? ', h('a', { href: './' }, 'Go to the participant page')),
+  );
+  focusHeading();
 }
 
 // ---------- My polls ----------
