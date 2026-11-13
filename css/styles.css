@@ -1510,7 +1510,9 @@ body.presenting .header-row {
 /* ---------- Movement ----------
    These run only for people who have not asked their device to reduce motion. */
 
-.check {
+/* The check-mark icon beside "Your answer is in." (Named "tick" because
+   ".check" is the style for checkbox and radio labels.) */
+.tick {
   display: inline-block;
   width: 1.4em;
   height: 1.4em;
@@ -1518,7 +1520,7 @@ body.presenting .header-row {
   vertical-align: -0.3em;
 }
 
-.check svg {
+.tick svg {
   display: block;
   width: 100%;
   height: 100%;
@@ -1624,7 +1626,7 @@ body.presenting .header-row {
     animation: otter-hop 0.75s cubic-bezier(0.2, 0.8, 0.2, 1) 0.12s both;
   }
 
-  .receipt.celebrate .check path {
+  .receipt.celebrate .tick path {
     stroke-dasharray: 1;
     stroke-dashoffset: 1;
     animation: check-draw 0.35s ease-out 0.4s forwards;

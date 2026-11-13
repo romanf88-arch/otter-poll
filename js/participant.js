@@ -368,7 +368,7 @@ function receipt(s, q, myAnswer, celebrate) {
     h(
       'div',
       null,
-      h('p', { class: 'receipt-title' }, h('span', { class: 'check', svg: icon.check }), 'Your answer is in.'),
+      h('p', { class: 'receipt-title' }, h('span', { class: 'tick', svg: icon.check }), 'Your answer is in.'),
       h('p', { class: 'receipt-answer' }, h('span', { class: 'receipt-label' }, 'You answered: '), String(text)),
       s.accepting
         ? h(

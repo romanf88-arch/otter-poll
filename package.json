@@ -5,7 +5,7 @@
   "description": "Classroom polling app. Run \"npm run build\" before each update to the site (see README.md).",
   "scripts": {
     "build": "node tools/build.mjs",
-    "test": "node --test tests/tally.test.mjs tests/access.test.mjs tests/rest.test.mjs",
+    "test": "node --test tests/tally.test.mjs tests/access.test.mjs tests/rest.test.mjs tests/css.test.mjs",
     "sim": "node tests/sim.mjs"
   },
   "devDependencies": {
