@@ -15,7 +15,13 @@ import { makeCode } from './util.js';
 import { canInstruct } from './access.js';
 
 const app = initializeApp(firebaseConfig);
-const auth = authMod.getAuth(app);
+// The participant page never opens a sign-in window. Set up this way, Firebase
+// skips the extra files it would otherwise fetch on phones to prepare one.
+// The instructor page keeps the standard setup, which the Google sign-in needs.
+const isParticipantPage = document.body.classList.contains('participant');
+const auth = isParticipantPage
+  ? authMod.initializeAuth(app, { persistence: [authMod.indexedDBLocalPersistence, authMod.browserLocalPersistence] })
+  : authMod.getAuth(app);
 const db = fs.getFirestore(app);
 
 const millis = (t) => (t && typeof t.toMillis === 'function' ? t.toMillis() : 0);

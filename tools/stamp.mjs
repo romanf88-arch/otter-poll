@@ -12,7 +12,7 @@
 
 import fs from 'node:fs';
 
-const stamp = process.argv[2] || new Date().toISOString().replace(/\D/g, '').slice(0, 12);
+const stamp = process.argv[2] || new Date().toISOString().replace(/\D/g, '').slice(0, 14);
 const modules = fs
   .readdirSync('js')
   .filter((name) => name.endsWith('.js'))
@@ -36,7 +36,7 @@ for (const page of ['index.html', 'instructor.html']) {
   let html = fs.readFileSync(page, 'utf8');
 
   // Stamp every local script and the stylesheet.
-  html = html.replace(/(href|src)="((?:js\/[\w-]+\.js)|(?:css\/styles\.css))(?:\?v=[^"]*)?"/g, (match, attr, file) => `${attr}="${file}?v=${stamp}"`);
+  html = html.replace(/(href|src)="((?:js\/[\w.-]+\.js)|(?:css\/styles\.css))(?:\?v=[^"]*)?"/g, (match, attr, file) => `${attr}="${file}?v=${stamp}"`);
 
   // Put the import map before the first script preload, replacing an earlier one.
   const existing = /[ \t]*<!-- importmap:start[\s\S]*?<!-- importmap:end -->\r?\n/;

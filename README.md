@@ -41,30 +41,43 @@ The colors and typeface follow the Cal State Monterey Bay brand guide (Monterey 
 | `js/rest.js` | Reads a poll without the Firebase code, for a fast first screen |
 | `css/styles.css` | All styling, including the movement after an answer is submitted |
 | `fonts/` | Montserrat, served from this site (SIL Open Font License, see `fonts/OFL.txt`) |
-| `tools/stamp.mjs` | Stamps a new version onto the script addresses before each update |
+| `js/participant.bundle.js` | The participant page's first-screen scripts packed into one file. Made by `tools/build.mjs`; do not edit |
+| `tools/build.mjs` | Run before each update: packs the bundle, then stamps new version numbers |
+| `tools/stamp.mjs` | The version-stamping step, called by the build tool |
 | `firestore.rules` | The database security rules |
 | `vendor/qrcode.js` | QR Code Generator by Kazuhiko Arase (MIT license) |
 | `tests/` | Unit tests and a script that acts as a room of participants |
 
-There is no build step. The site is plain HTML, CSS, and JavaScript modules, served by GitHub Pages from the `main` branch.
+The site is plain HTML, CSS, and JavaScript modules, served by GitHub Pages from the `main` branch. One build command prepares it for an update.
 
 ## Updating the site
 
-Run the stamp tool from this folder, then copy the files to the `otter-poll` repository and push.
+Run the build tool from this folder, then copy the files to the `otter-poll` repository and push. The first command is needed once, to install the tool it uses.
 
 ```bash
-node tools/stamp.mjs
+npm install
 ```
 
-The tool gives every script and style address in `index.html` and `instructor.html` a new version number. Browsers keep copies of files for about ten minutes. Without a new number, a browser could mix an old copy of one script with a new copy of another right after an update, and the page would not start.
+```bash
+node tools/build.mjs
+```
+
+The build tool does two things:
+
+- It packs `js/participant.js` and the files it imports into one file, `js/participant.bundle.js`, so a phone makes one request for the first screen's scripts instead of six. Edit the files in `js/` as usual and never edit the bundle by hand. If you skip this step after a change, the participant page keeps running the old code.
+- It gives every script and style address in `index.html` and `instructor.html` a new version number. Browsers keep copies of files for about ten minutes. Without a new number, a browser could mix an old copy of one script with a new copy of another right after an update, and the page would not start.
+
+The instructor page is not packed. It loads the files in `js/` directly.
 
 ## How the participant page loads quickly
 
 The Firebase code that sends answers and receives live updates is about 250 KB compressed, and a phone on a slow connection needs a few seconds to download and start it. The participant page does not wait for it:
 
 1. A short script at the top of `index.html` asks Firestore for the poll over its plain web address. This starts before the styles and scripts have loaded.
-2. `js/participant.js` shows the question as soon as that answer arrives.
+2. The page's own scripts arrive as one small file (about 10 KB compressed) and show the question as soon as the poll arrives.
 3. The Firebase code loads in the background and signs the device in without a name. If a participant taps Submit before it is ready, the button shows "Sending" until it is.
+
+The font is served from this site, and the participant page skips the extra files Firebase would otherwise fetch on phones to prepare a Google sign-in window, which participants never use.
 
 A device that has already answered a poll skips step 1 and loads its own answers the regular way, so it sees its confirmation instead of an empty form. The page remembers this in the browser's local storage under `otter-poll:joined`.
 
