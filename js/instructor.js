@@ -915,8 +915,11 @@ async function sessionsView() {
     return;
   }
   clear(list);
-  if (!sessions.length) {
+  const showEmpty = () => {
     list.append(h('section', { class: 'card center' }, h('div', { class: 'otter-box', svg: otterSvg('sleep') }), h('h2', null, 'No sessions yet'), h('p', null, 'Start a poll from My polls and its results will be saved here.')));
+  };
+  if (!sessions.length) {
+    showEmpty();
     return;
   }
   sessions.forEach((s) => {
@@ -947,6 +950,8 @@ async function sessionsView() {
                 await db.deleteSession(s.code);
                 card.remove();
                 announce('The session was deleted.');
+                if (!list.children.length) showEmpty();
+                focusHeading();
               } catch (err) {
                 e.target.disabled = false;
                 tell(db.explain(err));
