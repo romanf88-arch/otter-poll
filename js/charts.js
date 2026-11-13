@@ -2,7 +2,7 @@
 // Every number in a chart is also real text, so screen readers get the same
 // information that the bars and columns show.
 
-import { h, plural } from './util.js';
+import { h, plural, reducedMotion } from './util.js';
 
 const vh = (text) => h('span', { class: 'vh' }, text);
 
@@ -138,4 +138,26 @@ function answers(t, opts) {
     );
   });
   return h('div', { class: 'chart' }, list);
+}
+
+// Makes bars and columns glide from their sizes in the old chart to their sizes
+// in the new one, instead of jumping. Call it before the new chart goes on the page.
+export function carryOver(oldRoot, newRoot) {
+  if (!oldRoot || !newRoot || newRoot.querySelector('.ranks') || reducedMotion()) return;
+  for (const [selector, prop] of [
+    ['.bar-fill', 'width'],
+    ['.col-bar', 'height'],
+  ]) {
+    const before = [...oldRoot.querySelectorAll(selector)].map((el) => el.style[prop]);
+    const after = [...newRoot.querySelectorAll(selector)];
+    if (!before.length || before.length !== after.length) continue;
+    after.forEach((el, i) => {
+      const target = el.style[prop];
+      if (before[i] === target) return;
+      el.style[prop] = before[i];
+      window.setTimeout(() => {
+        el.style[prop] = target;
+      }, 30);
+    });
+  }
 }

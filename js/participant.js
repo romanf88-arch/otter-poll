@@ -1,12 +1,26 @@
 // The participant page: join with a code, answer, and see shared results.
 
-import * as db from './db.js';
-import { h, clear, announce, cleanCode, formatCode, plural } from './util.js';
+import { h, clear, announce, cleanCode, formatCode, explain, markJoined, reducedMotion } from './util.js';
 import { optionsOf, scaleMax, cleanAnswer, tally, publicTally, entriesFor, answerText, LIMITS } from './tally.js';
-import { renderTally, countLine } from './charts.js';
+import { renderTally, countLine, carryOver } from './charts.js';
 import { otterSvg } from './otter.js';
+import { decodeSession } from './rest.js';
 
 const app = document.getElementById('app');
+
+// The Firebase code is large. It loads in the background while the first
+// screen is already showing, and "ready" settles once this device is connected.
+let db = null;
+const dbLoading = import('./db.js').then((module) => {
+  db = module;
+});
+let markReady;
+let markFailed;
+const ready = new Promise((resolve, reject) => {
+  markReady = resolve;
+  markFailed = reject;
+});
+ready.catch(() => {});
 
 const state = {
   code: cleanCode(new URLSearchParams(window.location.search).get('c')),
@@ -22,11 +36,17 @@ const state = {
   selfLoading: false,
   viewKey: '',
   watching: false,
+  fresh: false, // true when the first screen came from the quick fetch in index.html
+  holding: false, // true while the answer form is sliding away
+  celebrate: null, // id of the question whose confirmation should animate in
+  introUntil: 0, // the results card is not redrawn before this time, so its entrance can finish
+  introTimer: 0,
 };
 
 const icon = {
   up: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 5l8 10H4z" fill="currentColor"/></svg>',
   down: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 19l8-10H4z" fill="currentColor"/></svg>',
+  check: '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="11" fill="#2f5d2d"/><path d="M6.5 12.5l3.6 3.6 7.4-8" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" pathLength="1"/></svg>',
 };
 
 start();
@@ -36,15 +56,45 @@ async function start() {
     joinView();
     return;
   }
-  messageView('loading', 'Opening the poll', 'One moment.', 'sleep');
+  // index.html started fetching the poll before this script had loaded. If that
+  // worked, the first screen can show now, without waiting for Firebase.
+  const early = window.__otterEarly;
+  if (early && early.code === state.code) {
+    const raw = await early.session.catch(() => undefined);
+    if (raw === null) {
+      state.session = null;
+      render();
+      return;
+    }
+    if (raw) {
+      state.fresh = true;
+      state.session = decodeSession(raw, state.code);
+      state.mine = {};
+      state.nameState = state.session.anonymous ? 'unknown' : 'needed';
+      render();
+    }
+  }
+  if (state.session === undefined) messageView('loading', 'Opening the poll', 'One moment.', 'sleep');
+  connect();
+}
+
+// Loads Firebase, signs this device in without a name, and starts listening for
+// changes to the poll. Sending an answer waits for this to finish.
+async function connect() {
   try {
+    await dbLoading;
     const user = await db.ensureUser();
     state.uid = user.uid;
   } catch (error) {
-    messageView('problem', 'We could not connect', db.explain(error), 'sleep', true);
+    markFailed(Object.assign(new Error('could not connect'), { code: 'unavailable' }));
+    if (state.session === undefined) messageView('problem', 'We could not connect', explain(error), 'sleep', true);
     return;
   }
-  db.watchSession(state.code, onSession, (error) => messageView('problem', 'We could not open the poll', db.explain(error), 'sleep', true));
+  db.watchSession(state.code, onSession, (error) => {
+    if (!state.session) messageView('problem', 'We could not open the poll', explain(error), 'sleep', true);
+  });
+  markReady();
+  if (window.performance && performance.mark) performance.mark('otter-connected');
 }
 
 function onSession(session) {
@@ -63,7 +113,8 @@ function onSession(session) {
         render();
       },
     );
-    if (!session.anonymous) {
+    // A device that has not joined this poll before has no saved name to look up.
+    if (!session.anonymous && !state.fresh) {
       state.nameState = 'checking';
       db.getMyName(state.code, state.uid).then(
         (name) => {
@@ -85,9 +136,17 @@ function onSession(session) {
 // update never wipes out an answer someone is in the middle of choosing.
 function show(key, title, build) {
   if (state.viewKey !== key) {
+    const first = state.viewKey === '';
     state.viewKey = key;
     clear(app);
     build();
+    // Every screen after the first eases in instead of snapping into place.
+    app.classList.remove('view-enter');
+    if (!first && !reducedMotion()) {
+      void app.offsetWidth;
+      app.classList.add('view-enter');
+    }
+    if (first && window.performance && performance.mark) performance.mark('otter-first-view');
     document.title = `${title} | Otter Poll`;
     const heading = app.querySelector('h1');
     if (heading) {
@@ -100,7 +159,7 @@ function show(key, title, build) {
 
 function render() {
   const s = state.session;
-  if (s === undefined) return;
+  if (s === undefined || state.holding) return;
   if (s === null) {
     joinView(`We could not find a poll with the code ${formatCode(state.code)}. Check the code and try again.`);
     return;
@@ -218,13 +277,15 @@ function nameView(s) {
           }
           button.disabled = true;
           try {
+            await ready;
             await db.setMyName(state.code, state.uid, name);
+            markJoined(state.code);
             state.name = name;
             state.nameState = 'have';
             render();
           } catch (e) {
             button.disabled = false;
-            error.textContent = db.explain(e);
+            error.textContent = explain(e);
           }
         },
       },
@@ -287,26 +348,27 @@ function questionView(s, q, index, total) {
       h('h1', { id: 'qtitle' }, q.text),
     );
     if (mode === 'form') section.append(answerForm(q, answered ? myAnswer : undefined));
-    else if (mode === 'done') section.append(receipt(s, q, myAnswer));
+    else if (mode === 'done') section.append(receipt(s, q, myAnswer, state.celebrate === q.id));
     else section.append(h('p', { class: 'notice' }, 'Voting is closed for this question.'));
     app.append(section, h('div', { id: 'results' }));
     if (s.pacing === 'self') app.append(selfNav(index, total, answered));
     app.append(h('p', { class: 'below-card' }, s.anonymous ? 'This poll is anonymous. Your name is not collected.' : `Answering as ${state.name}.`));
   });
 
+  state.celebrate = null;
   drawResults(s, q, answered, mode);
 }
 
-function receipt(s, q, myAnswer) {
+function receipt(s, q, myAnswer, celebrate) {
   const text = answerText(q, myAnswer);
   return h(
     'div',
-    { class: 'receipt' },
+    { class: celebrate ? 'receipt celebrate' : 'receipt' },
     h('div', { class: 'receipt-otter', svg: otterSvg('star') }),
     h(
       'div',
       null,
-      h('p', { class: 'receipt-title' }, 'Your answer is in.'),
+      h('p', { class: 'receipt-title' }, h('span', { class: 'check', svg: icon.check }), 'Your answer is in.'),
       h('p', { class: 'receipt-answer' }, h('span', { class: 'receipt-label' }, 'You answered: '), String(text)),
       s.accepting
         ? h(
@@ -355,19 +417,34 @@ async function submit(q, value, form) {
     error.textContent = 'Still sending. Check your internet connection.';
   }, 8000);
   try {
+    await ready;
     await db.submitAnswer(state.code, state.uid, q.id, cleaned);
     window.clearTimeout(slow);
+    markJoined(state.code);
+    error.textContent = '';
+    announce('Your answer is in.');
+    // The form slides away, then the confirmation and the results slide in.
+    state.holding = true;
+    await leave(form);
+    state.holding = false;
     state.mine = { ...state.mine, [q.id]: cleaned };
     state.editing = false;
     state.selfDocsAt = 0;
-    announce('Your answer is in.');
+    state.celebrate = q.id;
     render();
   } catch (e) {
     window.clearTimeout(slow);
+    state.holding = false;
     button.disabled = false;
     button.textContent = 'Submit';
-    error.textContent = e && String(e.code).includes('permission-denied') ? 'Your answer was not saved because voting has closed.' : db.explain(e);
+    error.textContent = e && String(e.code).includes('permission-denied') ? 'Your answer was not saved because voting has closed.' : explain(e);
   }
+}
+
+function leave(el) {
+  if (reducedMotion()) return Promise.resolve();
+  el.classList.add('is-leaving');
+  return new Promise((resolve) => window.setTimeout(resolve, 180));
 }
 
 function answerForm(q, initial) {
@@ -524,9 +601,27 @@ function drawResults(s, q, answered, mode) {
   }
   const mine = cleanAnswer(q, state.mine[q.id]);
   const paint = (t, extra) => {
+    const old = box.querySelector('.results-card');
+    // While the card is still sliding in, leave it alone and redraw right after.
+    if (old && Date.now() < state.introUntil) {
+      window.clearTimeout(state.introTimer);
+      state.introTimer = window.setTimeout(render, state.introUntil - Date.now() + 30);
+      return;
+    }
+    const chart = renderTally(t, { mine });
+    const entering = !old;
+    if (entering) state.introUntil = Date.now() + 1300;
+    // On later updates the bars glide from their old lengths to the new ones.
+    else if (old.getAttribute('data-qid') === q.id) carryOver(old, chart);
     clear(box);
     box.append(
-      h('section', { class: 'card results-card', 'aria-labelledby': 'results-title' }, h('div', { class: 'results-head' }, h('h2', { id: 'results-title' }, 'Results so far'), h('p', { class: 'count' }, countLine(t))), renderTally(t, { mine }), extra || null),
+      h(
+        'section',
+        { class: entering ? 'card results-card slide-in' : 'card results-card', 'data-qid': q.id, 'aria-labelledby': 'results-title' },
+        h('div', { class: 'results-head' }, h('h2', { id: 'results-title' }, 'Results so far'), h('p', { class: 'count' }, countLine(t))),
+        chart,
+        extra || null,
+      ),
     );
   };
 
@@ -549,7 +644,7 @@ function drawResults(s, q, answered, mode) {
       ),
     );
     if (state.selfDocs) paint(publicTally(tally(q, entriesFor(q, state.selfDocs), (s.hidden && s.hidden[q.id]) || [])), refresh);
-    if (!fresh && !state.selfLoading) {
+    if (!fresh && !state.selfLoading && db) {
       state.selfLoading = true;
       db.fetchResponses(state.code).then(
         (docs) => {

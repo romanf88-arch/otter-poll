@@ -190,3 +190,32 @@ export function qrSvg(text, label) {
   svg.append(bg, path);
   return svg;
 }
+
+export function reducedMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+// Remembers, on this device only, which polls it has answered. The page uses
+// this to decide how to load a poll the next time (see the script in index.html).
+const JOINED_KEY = 'otter-poll:joined';
+
+export function markJoined(code) {
+  try {
+    const list = JSON.parse(window.localStorage.getItem(JOINED_KEY) || '[]').filter((c) => c !== code);
+    list.push(code);
+    window.localStorage.setItem(JOINED_KEY, JSON.stringify(list.slice(-30)));
+  } catch (e) {
+    // Private browsing can block storage. The poll still works without it.
+  }
+}
+
+// Turns an error into a sentence a person can act on.
+export function explain(error) {
+  const code = String((error && error.code) || '');
+  if (code.includes('permission-denied')) return 'That was not allowed. The poll may be closed, or you may be signed in to a different account.';
+  if (code.includes('unavailable') || code.includes('network')) return 'The connection dropped. Check your internet connection and try again.';
+  if (code.includes('popup-closed') || code.includes('cancelled-popup')) return 'The sign-in window was closed before sign-in finished.';
+  if (code.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this page and try again.';
+  if (code.includes('resource-exhausted')) return 'The free daily limit for this app has been reached. It resets at midnight Pacific time.';
+  return 'Something went wrong. Please try again.';
+}

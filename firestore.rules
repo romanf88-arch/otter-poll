@@ -36,8 +36,10 @@ service cloud.firestore {
 
     // One run of a poll. The document id is the join code.
     match /sessions/{code} {
-      // Anyone with the code can open the poll.
-      allow get: if signedIn();
+      // Anyone with the join code can open the poll. No sign-in is needed to
+      // read it, so the participant page can show the first question before
+      // its sign-in step has finished.
+      allow get: if true;
       // Instructors can list only their own sessions.
       allow list: if isInstructor() && resource.data.owner == request.auth.uid;
       allow create: if isInstructor() && request.resource.data.owner == request.auth.uid;

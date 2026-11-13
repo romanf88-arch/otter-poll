@@ -153,10 +153,44 @@ if (mode === 'vote') {
   checks.push(await expectDenied('participant saves a poll under own id', () => setDoc(doc(b.db, 'users', b.uid, 'polls', 'x'), { title: 'x' })));
   checks.push(await expectDenied('participant writes extra fields in an answer document', () => setDoc(doc(b.db, 'sessions', code, 'responses', b.uid), { a: {}, at: serverTimestamp(), admin: true })));
   checks.push(await expectDenied('participant saves a name longer than 60 characters', () => setDoc(doc(b.db, 'sessions', code, 'people', b.uid), { name: 'x'.repeat(61) })));
+  // A visitor with no sign-in at all, using the plain web address the participant
+  // page uses for its first screen. Only the poll itself may be read this way.
+  const web = (path) => fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/${path}?key=${firebaseConfig.apiKey}`).then((r) => r.status);
+  const expectStatus = async (label, path, wanted) => {
+    const got = await web(path);
+    console.log(`${got === wanted ? 'ok  ' : 'FAIL'} ${label} -> ${got}`);
+    return got === wanted;
+  };
+  checks.push(await expectStatus('visitor with no sign-in reads the poll', `sessions/${code}`, 200));
+  checks.push(await expectStatus('visitor with no sign-in gets "not found" for a wrong code', 'sessions/ZZZZZZ', 404));
+  checks.push(await expectStatus('visitor with no sign-in lists all polls', 'sessions', 403));
+  checks.push(await expectStatus('visitor with no sign-in reads all answers', `sessions/${code}/responses`, 403));
+  checks.push(await expectStatus("visitor with no sign-in reads one participant's answers", `sessions/${code}/responses/${a.uid}`, 403));
+  checks.push(await expectStatus('visitor with no sign-in reads all names', `sessions/${code}/people`, 403));
+  checks.push(await expectStatus("visitor with no sign-in reads the instructor's saved polls", `users/${s.owner}/polls`, 403));
   console.log(`${checks.filter(Boolean).length} of ${checks.length} rule checks passed`);
   await close(a);
   await close(b);
+} else if (mode === 'time') {
+  // Compares the two ways a new device can get the first question, counting
+  // network time only (not the time a phone needs to download and run code).
+  const runs = Number(countArg || 3);
+  const quick = [];
+  const full = [];
+  for (let i = 0; i < runs; i++) {
+    let t = performance.now();
+    await fetch(`https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/sessions/${code}?key=${firebaseConfig.apiKey}`).then((r) => r.json());
+    quick.push(Math.round(performance.now() - t));
+    t = performance.now();
+    const u = await newUser(`t${i}`);
+    await getDoc(doc(u.db, 'sessions', code));
+    await getDoc(doc(u.db, 'sessions', code, 'responses', u.uid));
+    full.push(Math.round(performance.now() - t));
+    await close(u);
+  }
+  console.log(`quick fetch of the poll (new first screen): ${quick.join(', ')} ms`);
+  console.log(`sign-in, then poll, then own answers (old first screen): ${full.join(', ')} ms`);
 } else {
-  console.log('usage: node tests/sim.mjs vote CODE COUNT [all|current] [names] | node tests/sim.mjs rules CODE');
+  console.log('usage: node tests/sim.mjs vote CODE COUNT [all|current] [names] | node tests/sim.mjs rules CODE | node tests/sim.mjs time CODE [RUNS]');
 }
 process.exit(0);

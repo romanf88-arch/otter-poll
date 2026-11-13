@@ -217,7 +217,15 @@ export async function deleteSession(code) {
 // ---------- Participant ----------
 
 export function watchMyResponse(code, uid, callback, onError) {
-  return fs.onSnapshot(fs.doc(responsesRef(code), uid), (snap) => callback(snap.exists() ? snap.data().a || {} : {}), onError);
+  return fs.onSnapshot(
+    fs.doc(responsesRef(code), uid),
+    (snap) => {
+      // An answer counts as received only after the server has confirmed it.
+      if (snap.metadata.hasPendingWrites) return;
+      callback(snap.exists() ? snap.data().a || {} : {});
+    },
+    onError,
+  );
 }
 
 export function submitAnswer(code, uid, questionId, value) {
@@ -234,12 +242,4 @@ export function setMyName(code, uid, name) {
 }
 
 // Turns a Firebase error into a sentence a person can act on.
-export function explain(error) {
-  const code = (error && error.code) || '';
-  if (code.includes('permission-denied')) return 'That was not allowed. The poll may be closed, or you may be signed in to a different account.';
-  if (code.includes('unavailable') || code.includes('network')) return 'The connection dropped. Check your internet connection and try again.';
-  if (code.includes('popup-closed') || code.includes('cancelled-popup')) return 'The sign-in window was closed before sign-in finished.';
-  if (code.includes('popup-blocked')) return 'Your browser blocked the sign-in window. Allow pop-ups for this page and try again.';
-  if (code.includes('resource-exhausted')) return 'The free daily limit for this app has been reached. It resets at midnight Pacific time.';
-  return 'Something went wrong. Please try again.';
-}
+export { explain } from './util.js';

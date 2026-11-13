@@ -36,26 +36,51 @@ The colors and typeface follow the Cal State Monterey Bay brand guide (Monterey 
 | `js/tally.js` | Question types, counting, and CSV output (no browser code, so Node can test it) |
 | `js/charts.js` | Charts built from plain HTML, with every number also present as text |
 | `js/otter.js` | The otter drawings |
-| `js/config.js` | The Firebase project settings |
-| `css/styles.css` | All styling |
+| `js/config.js` | The Firebase project settings and who may run polls |
+| `js/access.js` | The check for who may use the instructor page |
+| `js/rest.js` | Reads a poll without the Firebase code, for a fast first screen |
+| `css/styles.css` | All styling, including the movement after an answer is submitted |
+| `fonts/` | Montserrat, served from this site (SIL Open Font License, see `fonts/OFL.txt`) |
+| `tools/stamp.mjs` | Stamps a new version onto the script addresses before each update |
 | `firestore.rules` | The database security rules |
 | `vendor/qrcode.js` | QR Code Generator by Kazuhiko Arase (MIT license) |
 | `tests/` | Unit tests and a script that acts as a room of participants |
 
 There is no build step. The site is plain HTML, CSS, and JavaScript modules, served by GitHub Pages from the `main` branch.
 
+## Updating the site
+
+Run the stamp tool from this folder, then copy the files to the `otter-poll` repository and push.
+
+```bash
+node tools/stamp.mjs
+```
+
+The tool gives every script and style address in `index.html` and `instructor.html` a new version number. Browsers keep copies of files for about ten minutes. Without a new number, a browser could mix an old copy of one script with a new copy of another right after an update, and the page would not start.
+
+## How the participant page loads quickly
+
+The Firebase code that sends answers and receives live updates is about 250 KB compressed, and a phone on a slow connection needs a few seconds to download and start it. The participant page does not wait for it:
+
+1. A short script at the top of `index.html` asks Firestore for the poll over its plain web address. This starts before the styles and scripts have loaded.
+2. `js/participant.js` shows the question as soon as that answer arrives.
+3. The Firebase code loads in the background and signs the device in without a name. If a participant taps Submit before it is ready, the button shows "Sending" until it is.
+
+A device that has already answered a poll skips step 1 and loads its own answers the regular way, so it sees its confirmation instead of an empty form. The page remembers this in the browser's local storage under `otter-poll:joined`.
+
 ## Where the data is
 
 Answers are stored in a Firebase project named `otter-poll` (Cloud Firestore, United States). The Firebase settings in `js/config.js` are public by design. They identify the project and do not grant access. Access is decided by `firestore.rules`:
 
 - Instructors sign in with Google. Only accounts with an @csumb.edu address can run polls, plus the one account that owns the Firebase project. Every CSUMB account qualifies, which includes student accounts. Each instructor can read and change only their own polls and sessions.
+- Anyone who has a join code can read that poll's title and questions without signing in. This is what lets the first question show quickly. Answers, names, and saved polls cannot be read this way.
 - Participants are signed in anonymously. A participant can write only their own answers, and only while voting is open.
 - Names are stored apart from answers, and participants can never read them.
 - In a self-paced poll that shares results, participants' browsers read the answers (which carry no names) to draw the charts, because no instructor page is open to add them up. In a poll the instructor paces, participants receive only the totals.
 
 To change who can run polls, edit `INSTRUCTOR_DOMAIN` and `OWNER_UIDS` in `js/config.js` and the matching lines in `firestore.rules`. The rules are what enforce it. The settings in `js/config.js` only decide which screen a person sees.
 
-To change the rules, edit `firestore.rules`, then paste the file into the Firebase console under Firestore Database, Rules, and choose Publish.
+To change the rules, edit `firestore.rules`, then paste the file into the Firebase console under Firestore Database, Rules, and choose Publish. The Rules Playground on that screen can try a request against the new rules before they are published.
 
 Deleting a session on the Past sessions page removes its answers and names from the database.
 
@@ -77,16 +102,22 @@ npm install
 npm test
 ```
 
-`npm test` runs the counting, CSV, and instructor-access tests. To act as a room of participants, start a poll on the instructor page and pass its join code to the simulation script. This example sends 30 participants who answer every question:
+`npm test` runs the counting, CSV, instructor-access, and poll-reading tests. To act as a room of participants, start a poll on the instructor page and pass its join code to the simulation script. This example sends 30 participants who answer every question:
 
 ```bash
 node tests/sim.mjs vote ABC234 30 all
 ```
 
-This one checks what a participant is and is not allowed to do under the security rules:
+This one checks what a participant, and a visitor with no sign-in, are and are not allowed to do under the security rules:
 
 ```bash
 node tests/sim.mjs rules ABC234
+```
+
+This one times the quick first-screen fetch against the full sign-in route:
+
+```bash
+node tests/sim.mjs time ABC234
 ```
 
 To preview the site on your own computer, serve this folder with any static file server and open `http://localhost:PORT/instructor.html`. Google sign-in works on `localhost`.

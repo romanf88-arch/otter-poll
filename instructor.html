@@ -7,10 +7,40 @@
     <meta name="description" content="Make classroom polls, run them live, and download the results." />
     <meta name="theme-color" content="#31456b" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="css/styles.css" />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="preload" href="fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/styles.css?v=202611130313" />
+    <!-- importmap:start (written by tools/stamp.mjs) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "./js/access.js": "./js/access.js?v=202611130313",
+          "./js/charts.js": "./js/charts.js?v=202611130313",
+          "./js/config.js": "./js/config.js?v=202611130313",
+          "./js/db.js": "./js/db.js?v=202611130313",
+          "./js/instructor.js": "./js/instructor.js?v=202611130313",
+          "./js/otter.js": "./js/otter.js?v=202611130313",
+          "./js/participant.js": "./js/participant.js?v=202611130313",
+          "./js/rest.js": "./js/rest.js?v=202611130313",
+          "./js/tally.js": "./js/tally.js?v=202611130313",
+          "./js/util.js": "./js/util.js?v=202611130313"
+        }
+      }
+    </script>
+    <!-- importmap:end -->
+    <!-- Fetch every script at once instead of one after another. -->
+    <link rel="modulepreload" href="js/instructor.js?v=202611130313" />
+    <link rel="modulepreload" href="js/db.js?v=202611130313" />
+    <link rel="modulepreload" href="js/util.js?v=202611130313" />
+    <link rel="modulepreload" href="js/tally.js?v=202611130313" />
+    <link rel="modulepreload" href="js/charts.js?v=202611130313" />
+    <link rel="modulepreload" href="js/otter.js?v=202611130313" />
+    <link rel="modulepreload" href="js/config.js?v=202611130313" />
+    <link rel="modulepreload" href="js/access.js?v=202611130313" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js" />
   </head>
   <body class="instructor">
     <a class="skip" href="#app">Skip to main content</a>
@@ -56,6 +86,6 @@
     </script>
     <noscript><p style="padding: 1rem">Otter Poll needs JavaScript. Turn it on in your browser settings and reload this page.</p></noscript>
     <script src="vendor/qrcode.js"></script>
-    <script type="module" src="js/instructor.js"></script>
+    <script type="module" src="js/instructor.js?v=202611130313"></script>
   </body>
 </html>

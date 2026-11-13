@@ -3,7 +3,7 @@
 import * as db from './db.js';
 import { h, clear, announce, askConfirm, tell, makeId, joinUrl, joinBaseShort, formatCode, plural, formatDate, downloadText, safeFilename, throttle, qrSvg } from './util.js';
 import { TYPES, YESNO_LABELS, LIMITS, optionsOf, tally, publicTally, entriesFor, answerText, summaryRows, responseRows, toCsv, pollProblems, cleanPoll, cleanAnswer } from './tally.js';
-import { renderTally, countLine } from './charts.js';
+import { renderTally, countLine, carryOver } from './charts.js';
 import { otterSvg } from './otter.js';
 
 const app = document.getElementById('app');
@@ -841,14 +841,19 @@ function presentView(code) {
     // Redrawing the chart must not strand keyboard focus that was on a Hide button.
     const focused = document.activeElement;
     const focusKey = focused && refs.chart.contains(focused) ? focused.getAttribute('data-hide-key') : null;
-    clear(refs.chart);
-    if (ui.onScreen) {
-      refs.chart.append(
-        renderTally(t, {
+    const oldChart = ui.chartQid === q.id ? refs.chart.firstElementChild : null;
+    const nextChart = ui.onScreen
+      ? renderTally(t, {
           showNames: !session.anonymous,
           onHide: canModerate && ui.moderating ? (key) => act(() => db.hideEntry(code, q.id, key)) : null,
-        }),
-      );
+        })
+      : null;
+    // As answers arrive, bars glide from their old lengths to the new ones.
+    if (nextChart && oldChart) carryOver(oldChart, nextChart);
+    ui.chartQid = q.id;
+    clear(refs.chart);
+    if (nextChart) {
+      refs.chart.append(nextChart);
     } else {
       refs.chart.append(h('div', { class: 'chart-hidden' }, h('div', { class: 'otter-box small', svg: otterSvg('sleep') }), h('p', null, 'Results are hidden on this screen.')));
     }

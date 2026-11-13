@@ -7,10 +7,67 @@
     <meta name="description" content="Join a classroom poll with the code your instructor is showing." />
     <meta name="theme-color" content="#31456b" />
     <link rel="icon" href="favicon.svg" type="image/svg+xml" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="css/styles.css" />
+    <!-- Open connections to Google's servers early. The poll data and the sign-in step use them. -->
+    <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://www.gstatic.com" crossorigin />
+    <link rel="preconnect" href="https://identitytoolkit.googleapis.com" crossorigin />
+    <script>
+      // Starts fetching the poll at once, before the styles and scripts have loaded,
+      // so the first question can show as early as possible. js/participant.js picks
+      // up the result. The project id and key repeat the values in js/config.js.
+      (function () {
+        try {
+          var code = (new URLSearchParams(location.search).get('c') || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+          if (code.length !== 6) return;
+          // A device that has already answered this poll loads its own answers the regular way.
+          if (JSON.parse(localStorage.getItem('otter-poll:joined') || '[]').indexOf(code) !== -1) return;
+          var url = 'https://firestore.googleapis.com/v1/projects/otter-poll/databases/(default)/documents/sessions/' + code + '?key=AIzaSyDOkvYyu1DyULufkfzpNI5b4XDifCVQWt0';
+          var session = fetch(url).then(function (response) {
+            if (response.status === 404) return null;
+            if (!response.ok) throw new Error('status ' + response.status);
+            return response.json();
+          });
+          session.catch(function () {});
+          window.__otterEarly = { code: code, session: session };
+        } catch (e) {
+          // If anything here fails, the page loads the poll the regular way.
+        }
+      })();
+    </script>
+    <link rel="preload" href="fonts/montserrat-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="css/styles.css?v=202611130313" />
+    <!-- importmap:start (written by tools/stamp.mjs) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "./js/access.js": "./js/access.js?v=202611130313",
+          "./js/charts.js": "./js/charts.js?v=202611130313",
+          "./js/config.js": "./js/config.js?v=202611130313",
+          "./js/db.js": "./js/db.js?v=202611130313",
+          "./js/instructor.js": "./js/instructor.js?v=202611130313",
+          "./js/otter.js": "./js/otter.js?v=202611130313",
+          "./js/participant.js": "./js/participant.js?v=202611130313",
+          "./js/rest.js": "./js/rest.js?v=202611130313",
+          "./js/tally.js": "./js/tally.js?v=202611130313",
+          "./js/util.js": "./js/util.js?v=202611130313"
+        }
+      }
+    </script>
+    <!-- importmap:end -->
+    <!-- The small scripts needed for the first screen. -->
+    <link rel="modulepreload" href="js/participant.js?v=202611130313" />
+    <link rel="modulepreload" href="js/util.js?v=202611130313" />
+    <link rel="modulepreload" href="js/tally.js?v=202611130313" />
+    <link rel="modulepreload" href="js/charts.js?v=202611130313" />
+    <link rel="modulepreload" href="js/otter.js?v=202611130313" />
+    <link rel="modulepreload" href="js/rest.js?v=202611130313" />
+    <!-- The larger Firebase code, fetched in the background for sending answers and live updates. -->
+    <link rel="modulepreload" href="js/db.js?v=202611130313" />
+    <link rel="modulepreload" href="js/config.js?v=202611130313" />
+    <link rel="modulepreload" href="js/access.js?v=202611130313" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js" fetchpriority="low" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-auth.js" fetchpriority="low" />
+    <link rel="modulepreload" href="https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js" fetchpriority="low" />
   </head>
   <body class="participant">
     <a class="skip" href="#app">Skip to main content</a>
@@ -54,6 +111,6 @@
       }, 12000);
     </script>
     <noscript><p style="padding: 1rem">Otter Poll needs JavaScript. Turn it on in your browser settings and reload this page.</p></noscript>
-    <script type="module" src="js/participant.js"></script>
+    <script type="module" src="js/participant.js?v=202611130313"></script>
   </body>
 </html>
