@@ -705,6 +705,7 @@ function presentView(code) {
     refs.onScreen = h('input', {
       id: 'tog-screen',
       type: 'checkbox',
+      role: 'switch',
       checked: true,
       onchange: (e) => {
         ui.onScreen = e.target.checked;
@@ -714,6 +715,7 @@ function presentView(code) {
     refs.share = h('input', {
       id: 'tog-share',
       type: 'checkbox',
+      role: 'switch',
       onchange: (e) => {
         const on = e.target.checked;
         act(() => db.updateSession(code, on ? { showResults: true } : { showResults: false, shared: null }));
@@ -795,7 +797,7 @@ function presentView(code) {
       h(
         'div',
         { class: 'controls', role: 'group', 'aria-label': 'Poll controls' },
-        h('div', { class: 'controls-main' }, refs.prev, refs.next, refs.vote, refs.end),
+        h('div', { class: 'controls-main' }, refs.prev, refs.next, refs.vote),
         h(
           'div',
           { class: 'controls-toggles' },
@@ -803,6 +805,7 @@ function presentView(code) {
           h('label', { class: 'check', for: 'tog-share' }, refs.share, h('span', null, 'Show results to participants')),
         ),
         h('div', { class: 'controls-more' }, refs.moderate, refs.restore, refs.reset, refs.full, h('a', { class: 'btn btn-small', href: `#/results/${code}` }, 'Results and downloads')),
+        h('div', { class: 'controls-end' }, refs.end),
       ),
       dialog,
     );
